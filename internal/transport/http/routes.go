@@ -33,4 +33,7 @@ func SetupRoutes(app *fiber.App) {
 	post := app.Group("/post")
 	post.Get("/", GetPosts)
 	post.Post("/", CreatePost)
+	post.Get("/:id", GetPostById)
+	post.Put("/:id", UpdatePost)
+	post.Delete("/:id", DeletePost)
 }
