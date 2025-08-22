@@ -9,6 +9,18 @@ func GetAllCategories() ([]models.Category, error) {
 	return repository.GetAllCategories()
 }
 
-func CreateCategory(user *models.Category) error {
-	return repository.CreateCategory(user)
+func GetCategoriesByid(id int) (models.Category, error) {
+	return repository.GetCategoriesByid(id)
+}
+
+func CreateCategory(category *models.Category) error {
+	return repository.CreateCategory(category)
+}
+
+func UpdateCategory(category *models.Category) error {
+	return repository.UpdateCategory(category)
+}
+
+func DeleteCategory(category *models.Category) error {
+	return repository.DeleteCategory(category)
 }
