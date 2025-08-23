@@ -4,11 +4,13 @@ import (
 	"blog-rest/internal/database"
 	"blog-rest/internal/models"
 	httpTransport "blog-rest/internal/transport/http"
+	"blog-rest/internal/validation"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
+	validation.InitValidator()
 	app := fiber.New()
 
 	database.Connect()
