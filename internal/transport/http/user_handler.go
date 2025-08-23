@@ -1,11 +1,16 @@
 package http
 
 import (
+	"blog-rest/internal/dto"
 	"blog-rest/internal/models"
 	"blog-rest/internal/services"
+	"blog-rest/internal/validation"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
+
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func GetAllUsers(c *fiber.Ctx) error {
@@ -16,7 +21,12 @@ func GetAllUsers(c *fiber.Ctx) error {
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
-	return c.JSON(users)
+	UserResponse := make([]dto.UserResponse, len(users))
+	for i, u := range users {
+		UserResponse[i] = dto.ToUserResponse(u)
+	}
+	return c.Status(fiber.StatusOK).JSON(UserResponse)
+
 }
 
 func GetUserById(c *fiber.Ctx) error {
@@ -34,24 +44,48 @@ func GetUserById(c *fiber.Ctx) error {
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
-	return c.JSON(user)
+	return c.Status(fiber.StatusOK).JSON(dto.ToUserResponse(user))
 }
 
 func CreateUser(c *fiber.Ctx) error {
-	user := new(models.User)
-	if err := c.BodyParser(user); err != nil {
+	var req dto.CreateUserRequest
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
-	if err := services.CreateUser(user); err != nil {
+	if err := validation.Validate.Struct(req); err != nil {
+		errs := err.(validator.ValidationErrors)
+		errMsg := make(map[string]string)
+		for _, e := range errs {
+			field := e.Field()
+			errMsg[field] = e.Translate(validation.Trans)
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": errMsg,
+			"code":  fiber.StatusBadRequest,
+		})
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
-	return c.JSON(user)
+	user := models.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: string(hashedPassword),
+	}
+	if err := services.CreateUser(&user); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+			"code":  fiber.StatusInternalServerError,
+		})
+	}
+	return c.Status(fiber.StatusCreated).JSON(dto.ToUserResponse(user))
 }
 
 func UpdateUser(c *fiber.Ctx) error {
@@ -63,8 +97,29 @@ func UpdateUser(c *fiber.Ctx) error {
 			"code":  fiber.StatusBadRequest,
 		})
 	}
-	var user models.User
+	var req dto.UpdateUserRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+			"code":  fiber.StatusInternalServerError,
+		})
+	}
+
+	user := models.User{
+		Name:  req.Name,
+		Email: req.Email,
+	}
 	user.ID = uint(id)
+	if req.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+				"code":  fiber.StatusInternalServerError,
+			})
+		}
+		user.Password = string(hashedPassword)
+	}
 	if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -78,7 +133,8 @@ func UpdateUser(c *fiber.Ctx) error {
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
-	return c.JSON(user)
+	return c.Status(fiber.StatusOK).JSON(dto.ToUserResponse(user))
+
 }
 
 func DeleteUser(c *fiber.Ctx) error {
