@@ -16,6 +16,6 @@ func main() {
 	database.Connect()
 
 	database.DB.AutoMigrate(&models.Post{}, &models.User{}, &models.Category{})
-	httpTransport.SetupRoutes(app)
+	httpTransport.SetupRoutes(app, database.DB)
 	app.Listen(":8000")
 }

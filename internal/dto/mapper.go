@@ -2,7 +2,7 @@ package dto
 
 import "blog-rest/internal/models"
 
-func ToUserResponse(user models.User) UserResponse {
+func ToUserResponse(user *models.User) UserResponse {
 	return UserResponse{
 		ID:    user.ID,
 		Name:  user.Name,
@@ -26,7 +26,7 @@ func ToUpdateUserRequest(userRequest UpdateUserRequest) models.User {
 	}
 }
 
-func ToCategoryResponse(category models.Category) CategoryResponse {
+func ToCategoryResponse(category *models.Category) CategoryResponse {
 	return CategoryResponse{
 		ID:   category.ID,
 		Name: category.Name,
@@ -50,8 +50,8 @@ func ToPostResponse(post models.Post) PostResponse {
 		ID:        post.ID,
 		Title:     post.Title,
 		Body:      post.Body,
-		User:      ToUserResponse(post.User),
-		Category:  ToCategoryResponse(post.Category),
+		User:      ToUserResponse(&post.User),
+		Category:  ToCategoryResponse(&post.Category),
 		CreatedAt: post.CreatedAt.Format("2006-01-02 15:04:05"),
 		UpdatedAt: post.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}

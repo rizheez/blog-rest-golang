@@ -11,8 +11,24 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetPosts(c *fiber.Ctx) error {
-	posts, err := services.GetPosts()
+type PostHandler interface {
+	GetPosts(c *fiber.Ctx) error
+	GetPostById(c *fiber.Ctx) error
+	CreatePost(c *fiber.Ctx) error
+	UpdatePost(c *fiber.Ctx) error
+	DeletePost(c *fiber.Ctx) error
+}
+
+type postHandler struct {
+	postService services.PostService
+}
+
+func NewPostHandler(ps services.PostService) PostHandler {
+	return &postHandler{postService: ps}
+}
+
+func (h *postHandler) GetPosts(c *fiber.Ctx) error {
+	posts, err := h.postService.GetPosts()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -26,7 +42,7 @@ func GetPosts(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(PostResponse)
 }
 
-func GetPostById(c *fiber.Ctx) error {
+func (h *postHandler) GetPostById(c *fiber.Ctx) error {
 	id, err := c.ParamsInt("id")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -34,7 +50,7 @@ func GetPostById(c *fiber.Ctx) error {
 			"code":  fiber.StatusBadRequest,
 		})
 	}
-	post, err := services.GetPostById(id)
+	post, err := h.postService.GetPostById(id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -45,7 +61,7 @@ func GetPostById(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(dto.ToPostResponse(post))
 }
 
-func CreatePost(c *fiber.Ctx) error {
+func (h *postHandler) CreatePost(c *fiber.Ctx) error {
 	var req dto.CreatePostRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -72,7 +88,7 @@ func CreatePost(c *fiber.Ctx) error {
 		CategoryID: req.CategoryID,
 	}
 
-	if err := services.CreatePost(&post); err != nil {
+	if err := h.postService.CreatePost(&post); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 			"code":  fiber.StatusInternalServerError,
@@ -83,7 +99,7 @@ func CreatePost(c *fiber.Ctx) error {
 
 }
 
-func UpdatePost(c *fiber.Ctx) error {
+func (h *postHandler) UpdatePost(c *fiber.Ctx) error {
 	idParams := c.Params("id")
 	id, err := strconv.Atoi(idParams)
 	if err != nil {
@@ -105,7 +121,7 @@ func UpdatePost(c *fiber.Ctx) error {
 		CategoryID: req.CategoryID,
 	}
 	post.ID = uint(id)
-	if err := services.UpdatePost(&post); err != nil {
+	if err := h.postService.UpdatePost(&post); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 			"code":  fiber.StatusInternalServerError,
@@ -114,7 +130,7 @@ func UpdatePost(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(dto.ToPostResponse(post))
 }
 
-func DeletePost(c *fiber.Ctx) error {
+func (h *postHandler) DeletePost(c *fiber.Ctx) error {
 	idParams := c.Params("id")
 	id, err := strconv.Atoi(idParams)
 	if err != nil {
@@ -125,7 +141,7 @@ func DeletePost(c *fiber.Ctx) error {
 	}
 	var post models.Post
 	post.ID = uint(id)
-	err = services.DeletePost(&post)
+	err = h.postService.DeletePost(&post)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

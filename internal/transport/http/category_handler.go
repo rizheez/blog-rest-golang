@@ -11,8 +11,23 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetAllCategories(c *fiber.Ctx) error {
-	categories, err := services.GetAllCategories()
+type CategoryHandler interface {
+	GetAllCategories(c *fiber.Ctx) error
+	GetCategoriesByid(c *fiber.Ctx) error
+	CreateCategory(c *fiber.Ctx) error
+	UpdateCategory(c *fiber.Ctx) error
+	DeleteCategory(c *fiber.Ctx) error
+}
+type categoryHandler struct {
+	categoryService services.CategoryService
+}
+
+func NewCategoryHandler(c services.CategoryService) CategoryHandler {
+	return &categoryHandler{categoryService: c}
+}
+
+func (h *categoryHandler) GetAllCategories(c *fiber.Ctx) error {
+	categories, err := h.categoryService.GetAllCategories()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -21,12 +36,12 @@ func GetAllCategories(c *fiber.Ctx) error {
 	}
 	CategoryResponse := make([]dto.CategoryResponse, len(categories))
 	for i, c := range categories {
-		CategoryResponse[i] = dto.ToCategoryResponse(c)
+		CategoryResponse[i] = dto.ToCategoryResponse(&c)
 	}
 	return c.Status(fiber.StatusOK).JSON(CategoryResponse)
 }
 
-func GetCategoriesByid(c *fiber.Ctx) error {
+func (h *categoryHandler) GetCategoriesByid(c *fiber.Ctx) error {
 	id, err := c.ParamsInt("id")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -34,7 +49,7 @@ func GetCategoriesByid(c *fiber.Ctx) error {
 			"code":  fiber.StatusBadRequest,
 		})
 	}
-	category, err := services.GetCategoriesByid(id)
+	category, err := h.categoryService.GetCategoriesByid(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -44,7 +59,7 @@ func GetCategoriesByid(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(dto.ToCategoryResponse(category))
 }
 
-func CreateCategory(c *fiber.Ctx) error {
+func (h *categoryHandler) CreateCategory(c *fiber.Ctx) error {
 	var req dto.CreateCategoryRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -68,17 +83,17 @@ func CreateCategory(c *fiber.Ctx) error {
 	category := models.Category{
 		Name: req.Name,
 	}
-	if err := services.CreateCategory(&category); err != nil {
+	if err := h.categoryService.CreateCategory(&category); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(dto.ToCategoryResponse(category))
+	return c.Status(fiber.StatusCreated).JSON(dto.ToCategoryResponse(&category))
 }
 
-func UpdateCategory(c *fiber.Ctx) error {
+func (h *categoryHandler) UpdateCategory(c *fiber.Ctx) error {
 	idParams := c.Params("id")
 	id, err := strconv.Atoi(idParams)
 	if err != nil {
@@ -105,16 +120,16 @@ func UpdateCategory(c *fiber.Ctx) error {
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
-	if err := services.UpdateCategory(&category); err != nil {
+	if err := h.categoryService.UpdateCategory(&category); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 			"code":  fiber.StatusInternalServerError,
 		})
 	}
-	return c.Status(fiber.StatusOK).JSON(dto.ToCategoryResponse(category))
+	return c.Status(fiber.StatusOK).JSON(dto.ToCategoryResponse(&category))
 }
 
-func DeleteCategory(c *fiber.Ctx) error {
+func (h *categoryHandler) DeleteCategory(c *fiber.Ctx) error {
 	idParams := c.Params("id")
 	id, err := strconv.Atoi(idParams)
 
@@ -126,7 +141,7 @@ func DeleteCategory(c *fiber.Ctx) error {
 	}
 	var category models.Category
 	category.ID = uint(id)
-	err = services.DeleteCategory(&category)
+	err = h.categoryService.DeleteCategory(&category)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

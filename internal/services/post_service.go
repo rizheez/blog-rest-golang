@@ -5,23 +5,38 @@ import (
 	"blog-rest/internal/repository"
 )
 
-func GetPosts() ([]models.Post, error) {
-	return repository.GetAllPosts()
-
+type PostService interface {
+	GetPosts() ([]models.Post, error)
+	GetPostById(id int) (models.Post, error)
+	CreatePost(post *models.Post) error
+	UpdatePost(post *models.Post) error
+	DeletePost(post *models.Post) error
 }
 
-func GetPostById(id int) (models.Post, error) {
-	return repository.GetPostById(id)
+type postService struct {
+	postRepo repository.PostRepository
 }
 
-func CreatePost(post *models.Post) error {
-	return repository.CreatePost(post)
+func NewPostService(postRepo repository.PostRepository) PostService {
+	return &postService{postRepo: postRepo}
 }
 
-func UpdatePost(post *models.Post) error {
-	return repository.UpdatePost(post)
+func (s *postService) GetPosts() ([]models.Post, error) {
+	return s.postRepo.GetAllPosts()
 }
 
-func DeletePost(post *models.Post) error {
-	return repository.DeletePost(post)
+func (s *postService) GetPostById(id int) (models.Post, error) {
+	return s.postRepo.GetPostById(id)
+}
+
+func (s *postService) CreatePost(post *models.Post) error {
+	return s.postRepo.CreatePost(post)
+}
+
+func (s *postService) UpdatePost(post *models.Post) error {
+	return s.postRepo.UpdatePost(post)
+}
+
+func (s *postService) DeletePost(post *models.Post) error {
+	return s.postRepo.DeletePost(post)
 }
