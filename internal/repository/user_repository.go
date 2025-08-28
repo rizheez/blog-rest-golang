@@ -1,32 +1,65 @@
 package repository
 
 import (
-	"blog-rest/internal/database"
 	"blog-rest/internal/models"
+	"errors"
+
+	"gorm.io/gorm"
 )
 
-func GetAllUsers() ([]models.User, error) {
+type UserRepository interface {
+	GetAllUsers() ([]models.User, error)
+	GetUserById(id uint) (*models.User, error)
+	GetUserByEmail(email string) (*models.User, error)
+	CreateUser(user *models.User) error
+	UpdateUser(user *models.User) error
+	DeleteUser(user *models.User) error
+}
+type userRepository struct {
+	db *gorm.DB
+}
+
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db}
+}
+func (r *userRepository) GetAllUsers() ([]models.User, error) {
 	var users []models.User
-	result := database.DB.Find(&users)
+	result := r.db.Find(&users)
 	err := result.Error
 	return users, err
 }
 
-func GetUserById(id int) (models.User, error) {
+func (r *userRepository) GetUserById(id uint) (*models.User, error) {
 	var user models.User
-	result := database.DB.First(&user, id)
-	err := result.Error
-	return user, err
+	if err := r.db.First(&user, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
 }
 
-func CreateUser(user *models.User) error {
-	return database.DB.Create(user).Error
+func (r *userRepository) GetUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &user, nil
 }
 
-func UpdateUser(user *models.User) error {
-	return database.DB.Model(&models.User{}).Where("id = ?", user.ID).Updates(user).Error
+func (r *userRepository) CreateUser(user *models.User) error {
+	return r.db.Create(user).Error
 }
 
-func DeleteUser(user *models.User) error {
-	return database.DB.Delete(user).Error
+func (r *userRepository) UpdateUser(user *models.User) error {
+	return r.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(user).Error
+}
+
+func (r *userRepository) DeleteUser(user *models.User) error {
+	return r.db.Delete(user).Error
 }

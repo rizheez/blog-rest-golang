@@ -7,27 +7,43 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func GetAllUsers() ([]models.User, error) {
-	return repository.GetAllUsers()
+type UserService interface {
+	GetAllUsers() ([]models.User, error)
+	GetUserById(id uint) (*models.User, error)
+	CreateUser(user *models.User) error
+	UpdateUser(user *models.User) error
+	DeleteUser(user *models.User) error
 }
 
-func GetUserById(id int) (models.User, error) {
-	return repository.GetUserById(id)
+type userService struct {
+	userRepo repository.UserRepository
 }
 
-func CreateUser(user *models.User) error {
+func NewUserService(u repository.UserRepository) UserService {
+	return &userService{userRepo: u}
+}
+
+func (s *userService) GetAllUsers() ([]models.User, error) {
+	return s.userRepo.GetAllUsers()
+}
+
+func (s *userService) GetUserById(id uint) (*models.User, error) {
+	return s.userRepo.GetUserById(id)
+}
+
+func (s *userService) CreateUser(user *models.User) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 	user.Password = string(hashedPassword)
-	return repository.CreateUser(user)
+	return s.userRepo.CreateUser(user)
 }
 
-func UpdateUser(user *models.User) error {
-	return repository.UpdateUser(user)
+func (s *userService) UpdateUser(user *models.User) error {
+	return s.userRepo.UpdateUser(user)
 }
 
-func DeleteUser(user *models.User) error {
-	return repository.DeleteUser(user)
+func (s *userService) DeleteUser(user *models.User) error {
+	return s.userRepo.DeleteUser(user)
 }
